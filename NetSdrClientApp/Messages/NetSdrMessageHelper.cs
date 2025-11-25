@@ -70,40 +70,57 @@ namespace NetSdrClientApp.Messages
         {
             itemCode = ControlItemCodes.None;
             sequenceNumber = 0;
-            bool success = true;
-            var msgEnumarable = msg as IEnumerable<byte>;
-
-            TranslateHeader(msgEnumarable.Take(_msgHeaderLength).ToArray(), out type, out int msgLength);
-            msgEnumarable = msgEnumarable.Skip(_msgHeaderLength);
-            msgLength -= _msgHeaderLength;
-
-            if (type < MsgTypes.DataItem0) // get item code
+            body = Array.Empty<byte>();
+            type = MsgTypes.SetControlItem;
+            
+            try
             {
-                var value = BitConverter.ToUInt16(msgEnumarable.Take(_msgControlItemLength).ToArray());
-                msgEnumarable = msgEnumarable.Skip(_msgControlItemLength);
-                msgLength -= _msgControlItemLength;
+                bool success = true;
+                var msgEnumarable = msg as IEnumerable<byte>;
 
-                if (Enum.IsDefined(typeof(ControlItemCodes), value))
+                TranslateHeader(msgEnumarable.Take(_msgHeaderLength).ToArray(), out type, out int msgLength);
+                msgEnumarable = msgEnumarable.Skip(_msgHeaderLength);
+                msgLength -= _msgHeaderLength;
+
+                if (type < MsgTypes.DataItem0) // get item code
                 {
-                    itemCode = (ControlItemCodes)value;
+                    var value = BitConverter.ToUInt16(msgEnumarable.Take(_msgControlItemLength).ToArray());
+                    msgEnumarable = msgEnumarable.Skip(_msgControlItemLength);
+                    msgLength -= _msgControlItemLength;
+
+                    // ВИПРАВЛЕННЯ: приведення UInt16 до int для перевірки enum
+                    if (Enum.IsDefined(typeof(ControlItemCodes), (int)value))
+                    {
+                        itemCode = (ControlItemCodes)value;
+                    }
+                    else
+                    {
+                        success = false;
+                    }
                 }
-                else
+                else // get sequenceNumber
                 {
-                    success = false;
+                    sequenceNumber = BitConverter.ToUInt16(msgEnumarable.Take(_msgSequenceNumberLength).ToArray());
+                    msgEnumarable = msgEnumarable.Skip(_msgSequenceNumberLength);
+                    msgLength -= _msgSequenceNumberLength;
                 }
+
+                body = msgEnumarable.ToArray();
+
+                success &= body.Length == msgLength;
+
+                return success;
             }
-            else // get sequenceNumber
+            catch (ArgumentOutOfRangeException)
             {
-                sequenceNumber = BitConverter.ToUInt16(msgEnumarable.Take(_msgSequenceNumberLength).ToArray());
-                msgEnumarable = msgEnumarable.Skip(_msgSequenceNumberLength);
-                msgLength -= _msgSequenceNumberLength;
+                // ВИПРАВЛЕННЯ: обробка винятків замість пропагації
+                return false;
             }
-
-            body = msgEnumarable.ToArray();
-
-            success &= body.Length == msgLength;
-
-            return success;
+            catch (Exception)
+            {
+                // На випадок інших помилок при парсингу
+                return false;
+            }
         }
 
         public static IEnumerable<int> GetSamples(ushort sampleSize, byte[] body)
