@@ -1,66 +1,62 @@
-using System.Net.Sockets;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
-using EchoServer.Abstractions;
 using Moq;
-using Xunit;
+using NUnit.Framework;
+using EchoTcpServer.Abstractions;
 
-public class NetworkStreamWrapperTests
+namespace NetSdrClientAppTests
 {
-    [Fact]
-    public async Task ReadAsync_Should_Call_Underlying_Stream()
+    [TestFixture]
+    public class NetworkStreamWrapperTests
     {
-        // Arrange
-        var mockStream = new Mock<NetworkStream>(MockBehavior.Strict);
-        byte[] buffer = new byte[4];
+        private Mock<Stream> _mockStream = null!;
+        private NetworkStreamWrapper _wrapper = null!;
 
-        mockStream
-            .Setup(s => s.ReadAsync(buffer, 0, 4, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(4);
+        [SetUp]
+        public void Setup()
+        {
+            _mockStream = new Mock<Stream>();
+            _wrapper = new NetworkStreamWrapper(_mockStream.Object);
+        }
 
-        var wrapper = new NetworkStreamWrapper(mockStream.Object);
+        [TearDown]
+        public void Teardown()
+        {
+            _wrapper.Dispose();
+        }
 
-        // Act
-        int result = await wrapper.ReadAsync(buffer, 0, 4, CancellationToken.None);
+        [Test]
+        public async Task ReadAsync_Should_Call_Underlying_Stream()
+        {
+            var buffer = new byte[10];
+            _mockStream.Setup(s => s.ReadAsync(buffer, 0, buffer.Length, default))
+                       .ReturnsAsync(buffer.Length)
+                       .Verifiable();
 
-        // Assert
-        Assert.Equal(4, result);
-        mockStream.Verify(s => s.ReadAsync(buffer, 0, 4, It.IsAny<CancellationToken>()), Times.Once);
-    }
+            var result = await _wrapper.ReadAsync(buffer, 0, buffer.Length);
 
-    [Fact]
-    public async Task WriteAsync_Should_Call_Underlying_Stream()
-    {
-        // Arrange
-        var mockStream = new Mock<NetworkStream>(MockBehavior.Strict);
-        byte[] buffer = new byte[4];
+            Assert.AreEqual(buffer.Length, result);
+            _mockStream.Verify();
+        }
 
-        mockStream
-            .Setup(s => s.WriteAsync(buffer, 0, 4, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        [Test]
+        public async Task WriteAsync_Should_Call_Underlying_Stream()
+        {
+            var buffer = new byte[10];
+            _mockStream.Setup(s => s.WriteAsync(buffer, 0, buffer.Length, default))
+                       .Returns(Task.CompletedTask)
+                       .Verifiable();
 
-        var wrapper = new NetworkStreamWrapper(mockStream.Object);
+            await _wrapper.WriteAsync(buffer, 0, buffer.Length);
 
-        // Act
-        await wrapper.WriteAsync(buffer, 0, 4, CancellationToken.None);
+            _mockStream.Verify();
+        }
 
-        // Assert
-        mockStream.Verify(s => s.WriteAsync(buffer, 0, 4, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public void Dispose_Should_Dispose_Inner_Stream()
-    {
-        // Arrange
-        var mockStream = new Mock<NetworkStream>(MockBehavior.Strict);
-        mockStream.Setup(s => s.Dispose());
-
-        var wrapper = new NetworkStreamWrapper(mockStream.Object);
-
-        // Act
-        wrapper.Dispose();
-
-        // Assert
-        mockStream.Verify(s => s.Dispose(), Times.Once);
+        [Test]
+        public void Dispose_Should_Dispose_Inner_Stream()
+        {
+            _wrapper.Dispose();
+            _mockStream.Verify(s => s.Dispose(), Times.Once);
+        }
     }
 }
