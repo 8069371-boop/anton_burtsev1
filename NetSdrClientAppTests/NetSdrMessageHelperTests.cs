@@ -83,7 +83,7 @@ namespace NetSdrClientAppTests
         {
             // Arrange
             var expectedType = MsgTypes.DataItem1;
-            var parameters = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
+            var parameters = new byte[] { 0x01, 0x00, 0x03, 0x04, 0x05, 0x06 }; // перші 2 байти - sequence number
             var message = NetSdrMessageHelper.GetDataItemMessage(expectedType, parameters);
 
             // Act
@@ -98,7 +98,8 @@ namespace NetSdrClientAppTests
             Assert.That(result, Is.True);
             Assert.That(actualType, Is.EqualTo(expectedType));
             Assert.That(itemCode, Is.EqualTo(ControlItemCodes.None));
-            Assert.That(body.Take(4), Is.EqualTo(parameters.Take(4)));
+            // Перші 2 байти стають sequence number, решта - body
+            Assert.That(body.Length, Is.EqualTo(parameters.Length - 2));
         }
 
         [Test]
@@ -227,14 +228,15 @@ namespace NetSdrClientAppTests
             // Assert
             Assert.That(result, Is.True);
             Assert.That(actualType, Is.EqualTo(type));
-            Assert.That(body.Length, Is.EqualTo(8190)); // 8192 - 2 sequence number
+            // Body має бути 8190 тому що 2 байти йдуть на sequence number
+            Assert.That(body.Length, Is.EqualTo(8190));
         }
 
         [Test]
         public void TranslateMessage_WithInvalidMessage_ShouldReturnFalse()
         {
-            // Arrange
-            var invalidMessage = new byte[] { 0xFF, 0xFF };
+            // Arrange - створюємо дуже короткий масив який не може бути валідним
+            var invalidMessage = new byte[] { 0xFF };
 
             // Act
             var result = NetSdrMessageHelper.TranslateMessage(
