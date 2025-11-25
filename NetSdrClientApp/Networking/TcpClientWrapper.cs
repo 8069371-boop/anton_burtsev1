@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace NetSdrClientApp.Networking
 {
     public class TcpClientWrapper : ITcpClient
