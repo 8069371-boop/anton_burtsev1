@@ -357,7 +357,7 @@ namespace EchoServer.Tests
         }
 
         [Test]
-        public void UdpTimedSender_WithNullLogger_ShouldHandleGracefully()
+        public void UdpTimedSender_WithNullLogger_ShouldThrowArgumentNullException()
         {
             // Arrange
             var host = "127.0.0.1";
@@ -369,9 +369,9 @@ namespace EchoServer.Tests
                 using var sender = new UdpTimedSender(host, port, null!);
             };
 
-            // Assert - залежить від реалізації, може кинути exception або обробити null
-            // Тут припускаємо, що конструктор приймає null
-            act.Should().NotThrow();
+            // Assert - конструктор повинен кидати ArgumentNullException для null logger
+            act.Should().Throw<ArgumentNullException>()
+                .WithParameterName("logger");
         }
     }
 }
