@@ -21,7 +21,8 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
   </ItemGroup>
-  
+
+
   <ItemGroup>
     <ProjectReference Include="..\EchoTcpServer\EchoServer.csproj" />
     <ProjectReference Include="..\NetSdrClientApp\NetSdrClientApp.csproj" />
