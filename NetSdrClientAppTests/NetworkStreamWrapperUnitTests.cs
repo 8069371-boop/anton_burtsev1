@@ -28,7 +28,8 @@ namespace EchoServer.Tests.Abstractions
             if (_listener != null)
             {
                 _listener.Stop();
-                (_listener as IDisposable)?.Dispose();
+                _listener.Server?.Close();
+                _listener.Server?.Dispose();
             }
         }
 
