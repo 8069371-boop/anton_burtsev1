@@ -7,6 +7,7 @@ using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 
+
 namespace NetSdrClientAppTests
 {
     [TestFixture]
