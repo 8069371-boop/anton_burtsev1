@@ -5,6 +5,7 @@ using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace NetSdrClientApp.Messages
 {
     //TODO: analyze possible use of [StructLayout] for better performance and readability 
