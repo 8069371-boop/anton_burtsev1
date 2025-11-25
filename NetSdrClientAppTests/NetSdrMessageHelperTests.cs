@@ -171,7 +171,8 @@ namespace NetSdrClientAppTests
             // Arrange
             var type = MsgTypes.SetControlItem;
             var code = ControlItemCodes.ReceiverState;
-            var parameters = new byte[8189]; // 8191 max - 2 header = 8189
+            // 8191 max - 2 header - 2 itemCode = 8187
+            var parameters = new byte[8187];
 
             // Act & Assert
             Assert.DoesNotThrow(() => 
@@ -184,7 +185,8 @@ namespace NetSdrClientAppTests
             // Arrange
             var type = MsgTypes.SetControlItem;
             var code = ControlItemCodes.ReceiverState;
-            var parameters = new byte[8190]; // Exceeds max
+            // 8191 max - 2 header - 2 itemCode + 1 = 8188 (перевищує ліміт)
+            var parameters = new byte[8188];
 
             // Act & Assert
             Assert.Throws<ArgumentException>(() =>
