@@ -12,21 +12,12 @@ namespace EchoServer.Tests.Abstractions
     {
         private TcpClientWrapper? _sut;
         private TcpClient? _testClient;
-        private TcpListener? _testListener;
 
         [TearDown]
         public void TearDown()
         {
             _sut?.Dispose();
             _testClient?.Dispose();
-            
-            if (_testListener != null)
-            {
-                _testListener.Stop();
-                _testListener.Server?.Dispose();
-                // Виправлення: додано Dispose для _testListener
-                (_testListener as IDisposable)?.Dispose();
-            }
         }
 
         [Test]
@@ -57,9 +48,9 @@ namespace EchoServer.Tests.Abstractions
         public void GetStream_WhenConnected_ShouldReturnNetworkStreamWrapper()
         {
             // Arrange
-            _testListener = new TcpListener(IPAddress.Loopback, 0);
-            _testListener.Start();
-            var port = ((IPEndPoint)_testListener.LocalEndpoint).Port;
+            using var testListener = new TcpListener(IPAddress.Loopback, 0);
+            testListener.Start();
+            var port = ((IPEndPoint)testListener.LocalEndpoint).Port;
 
             _testClient = new TcpClient();
             _testClient.Connect(IPAddress.Loopback, port);
@@ -77,9 +68,9 @@ namespace EchoServer.Tests.Abstractions
         public void GetStream_CalledMultipleTimes_ShouldReturnNewInstanceEachTime()
         {
             // Arrange
-            _testListener = new TcpListener(IPAddress.Loopback, 0);
-            _testListener.Start();
-            var port = ((IPEndPoint)_testListener.LocalEndpoint).Port;
+            using var testListener = new TcpListener(IPAddress.Loopback, 0);
+            testListener.Start();
+            var port = ((IPEndPoint)testListener.LocalEndpoint).Port;
 
             _testClient = new TcpClient();
             _testClient.Connect(IPAddress.Loopback, port);
@@ -97,9 +88,9 @@ namespace EchoServer.Tests.Abstractions
         public void Close_WhenCalled_ShouldCloseConnection()
         {
             // Arrange
-            _testListener = new TcpListener(IPAddress.Loopback, 0);
-            _testListener.Start();
-            var port = ((IPEndPoint)_testListener.LocalEndpoint).Port;
+            using var testListener = new TcpListener(IPAddress.Loopback, 0);
+            testListener.Start();
+            var port = ((IPEndPoint)testListener.LocalEndpoint).Port;
 
             _testClient = new TcpClient();
             _testClient.Connect(IPAddress.Loopback, port);
@@ -134,9 +125,9 @@ namespace EchoServer.Tests.Abstractions
         public void Dispose_WhenCalled_ShouldDisposeClient()
         {
             // Arrange
-            _testListener = new TcpListener(IPAddress.Loopback, 0);
-            _testListener.Start();
-            var port = ((IPEndPoint)_testListener.LocalEndpoint).Port;
+            using var testListener = new TcpListener(IPAddress.Loopback, 0);
+            testListener.Start();
+            var port = ((IPEndPoint)testListener.LocalEndpoint).Port;
 
             _testClient = new TcpClient();
             _testClient.Connect(IPAddress.Loopback, port);
@@ -218,9 +209,9 @@ namespace EchoServer.Tests.Abstractions
         public void Wrapper_ShouldProperlyWrapTcpClientBehavior()
         {
             // Arrange
-            _testListener = new TcpListener(IPAddress.Loopback, 0);
-            _testListener.Start();
-            var port = ((IPEndPoint)_testListener.LocalEndpoint).Port;
+            using var testListener = new TcpListener(IPAddress.Loopback, 0);
+            testListener.Start();
+            var port = ((IPEndPoint)testListener.LocalEndpoint).Port;
 
             _testClient = new TcpClient();
             
