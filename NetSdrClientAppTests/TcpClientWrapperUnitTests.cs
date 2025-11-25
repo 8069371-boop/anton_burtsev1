@@ -19,7 +19,12 @@ namespace EchoServer.Tests.Abstractions
         {
             _sut?.Dispose();
             _testClient?.Dispose();
-            _testListener?.Stop();
+            
+            if (_testListener != null)
+            {
+                _testListener.Stop();
+                _testListener.Server?.Dispose();
+            }
         }
 
         [Test]
