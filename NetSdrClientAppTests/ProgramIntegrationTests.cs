@@ -66,7 +66,7 @@ namespace EchoServer.Tests
         public async Task EchoServerService_StartAsync_ShouldStartSuccessfully()
         {
             // Arrange
-            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<int>()))
+            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<System.Net.IPAddress>(), It.IsAny<int>()))
                 .Returns(_mockListener!.Object);
             
             _mockListener!.Setup(l => l.Start()).Verifiable();
@@ -116,7 +116,7 @@ namespace EchoServer.Tests
             Action act = () =>
             {
                 sender.StartSending(intervalMilliseconds);
-                Thread.Sleep(100);
+                Task.Delay(100).Wait();
                 sender.StopSending();
             };
 
@@ -200,7 +200,7 @@ namespace EchoServer.Tests
         public async Task EchoServerService_Stop_ShouldStopServer()
         {
             // Arrange
-            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<int>()))
+            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<System.Net.IPAddress>(), It.IsAny<int>()))
                 .Returns(_mockListener!.Object);
             
             _mockListener!.Setup(l => l.Start()).Verifiable();
@@ -239,7 +239,7 @@ namespace EchoServer.Tests
                 
                 // Quick start and stop to test initialization
                 sender.StartSending(intervalMilliseconds);
-                Thread.Sleep(50);
+                Task.Delay(50).Wait();
                 sender.StopSending();
                 server.Stop();
             };
@@ -268,7 +268,7 @@ namespace EchoServer.Tests
         public async Task ServerStartup_ShouldInitializeAllComponents()
         {
             // Arrange
-            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<int>()))
+            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<System.Net.IPAddress>(), It.IsAny<int>()))
                 .Returns(_mockListener!.Object);
             
             _mockListener!.Setup(l => l.Start()).Verifiable();
@@ -285,7 +285,7 @@ namespace EchoServer.Tests
             server.Stop();
 
             // Assert
-            _mockListenerFactory.Verify(f => f.Create(5000), Times.Once);
+            _mockListenerFactory.Verify(f => f.Create(It.IsAny<System.Net.IPAddress>(), 5000), Times.Once);
             _mockListener.Verify(l => l.Start(), Times.Once);
         }
 
@@ -315,7 +315,7 @@ namespace EchoServer.Tests
 
             // Act
             sender.StartSending(intervalMilliseconds);
-            Thread.Sleep(50);
+            Task.Delay(50).Wait();
             sender.StopSending();
 
             // Assert
@@ -326,7 +326,7 @@ namespace EchoServer.Tests
         public async Task ServerLifecycle_StartAndStop_ShouldWorkCorrectly()
         {
             // Arrange
-            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<int>()))
+            _mockListenerFactory!.Setup(f => f.Create(It.IsAny<System.Net.IPAddress>(), It.IsAny<int>()))
                 .Returns(_mockListener!.Object);
             
             _mockListener!.Setup(l => l.AcceptTcpClientAsync())
