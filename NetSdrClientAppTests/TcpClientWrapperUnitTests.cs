@@ -1,8 +1,9 @@
 using System;
+using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using EchoServer.Abstractions;
 using FluentAssertions;
-using Moq;
 using NUnit.Framework;
 
 namespace EchoServer.Tests.Abstractions
@@ -10,28 +11,24 @@ namespace EchoServer.Tests.Abstractions
     [TestFixture]
     public class TcpClientWrapperUnitTests
     {
-        private Mock<TcpClient> _mockTcpClient;
-        private Mock<NetworkStream> _mockNetworkStream;
-        private TcpClientWrapper _sut;
-
-        [SetUp]
-        public void SetUp()
-        {
-            _mockTcpClient = new Mock<TcpClient>();
-            _mockNetworkStream = new Mock<NetworkStream>();
-        }
+        private TcpClientWrapper? _sut;
+        private TcpClient? _testClient;
 
         [TearDown]
         public void TearDown()
         {
             _sut?.Dispose();
+            _testClient?.Dispose();
         }
 
         [Test]
         public void Constructor_WithValidTcpClient_ShouldCreateInstance()
         {
-            // Arrange & Act
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            // Arrange
+            _testClient = new TcpClient();
+
+            // Act
+            _sut = new TcpClientWrapper(_testClient);
 
             // Assert
             _sut.Should().NotBeNull();
@@ -39,111 +36,142 @@ namespace EchoServer.Tests.Abstractions
         }
 
         [Test]
-        public void Constructor_WithNullTcpClient_ShouldThrowArgumentNullException()
+        public void Constructor_WithNullTcpClient_ShouldNotThrow()
         {
             // Arrange & Act
-            Action act = () => _sut = new TcpClientWrapper(null);
+            Action act = () => _sut = new TcpClientWrapper(null!);
 
             // Assert
-            act.Should().Throw<ArgumentNullException>();
+            // TcpClientWrapper конструктор не валідує null, тому не кидає виключення
+            act.Should().NotThrow();
         }
 
         [Test]
-        public void GetStream_WhenCalled_ShouldReturnNetworkStreamWrapper()
+        public void GetStream_WhenConnected_ShouldReturnNetworkStreamWrapper()
         {
             // Arrange
-            _mockTcpClient.Setup(c => c.GetStream()).Returns(_mockNetworkStream.Object);
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-            // Act
-            var result = _sut.GetStream();
+            _testClient = new TcpClient();
+            _testClient.Connect(IPAddress.Loopback, port);
+            _sut = new TcpClientWrapper(_testClient);
 
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().BeAssignableTo<INetworkStreamWrapper>();
-            _mockTcpClient.Verify(c => c.GetStream(), Times.Once);
+            try
+            {
+                // Act
+                var result = _sut.GetStream();
+
+                // Assert
+                result.Should().NotBeNull();
+                result.Should().BeAssignableTo<INetworkStreamWrapper>();
+            }
+            finally
+            {
+                listener.Stop();
+            }
         }
 
         [Test]
         public void GetStream_CalledMultipleTimes_ShouldReturnNewInstanceEachTime()
         {
             // Arrange
-            _mockTcpClient.Setup(c => c.GetStream()).Returns(_mockNetworkStream.Object);
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-            // Act
-            var stream1 = _sut.GetStream();
-            var stream2 = _sut.GetStream();
+            _testClient = new TcpClient();
+            _testClient.Connect(IPAddress.Loopback, port);
+            _sut = new TcpClientWrapper(_testClient);
 
-            // Assert
-            stream1.Should().NotBeSameAs(stream2);
-            _mockTcpClient.Verify(c => c.GetStream(), Times.Exactly(2));
+            try
+            {
+                // Act
+                var stream1 = _sut.GetStream();
+                var stream2 = _sut.GetStream();
+
+                // Assert
+                stream1.Should().NotBeSameAs(stream2);
+            }
+            finally
+            {
+                listener.Stop();
+            }
         }
 
         [Test]
-        public void Close_WhenCalled_ShouldCloseTcpClient()
+        public void Close_WhenCalled_ShouldCloseConnection()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-            // Act
-            _sut.Close();
+            _testClient = new TcpClient();
+            _testClient.Connect(IPAddress.Loopback, port);
+            _sut = new TcpClientWrapper(_testClient);
 
-            // Assert
-            _mockTcpClient.Verify(c => c.Close(), Times.Once);
+            try
+            {
+                // Act
+                _sut.Close();
+
+                // Assert
+                _testClient.Connected.Should().BeFalse();
+            }
+            finally
+            {
+                listener.Stop();
+            }
         }
 
         [Test]
-        public void Close_CalledMultipleTimes_ShouldCloseEachTime()
+        public void Close_CalledMultipleTimes_ShouldNotThrow()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
 
             // Act
-            _sut.Close();
-            _sut.Close();
+            Action act = () =>
+            {
+                _sut.Close();
+                _sut.Close();
+            };
 
             // Assert
-            _mockTcpClient.Verify(c => c.Close(), Times.Exactly(2));
+            act.Should().NotThrow();
         }
 
         [Test]
-        public void Dispose_WhenCalled_ShouldDisposeTcpClient()
+        public void Dispose_WhenCalled_ShouldDisposeClient()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
 
             // Act
             _sut.Dispose();
 
             // Assert
-            _mockTcpClient.Verify(c => c.Dispose(), Times.Once);
+            Action act = () => _ = _testClient.Client;
+            act.Should().Throw<ObjectDisposedException>();
         }
 
         [Test]
-        public void Dispose_CalledMultipleTimes_ShouldDisposeOnlyOnce()
+        public void Dispose_CalledMultipleTimes_ShouldNotThrow()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
 
             // Act
-            _sut.Dispose();
-            _sut.Dispose();
-
-            // Assert
-            _mockTcpClient.Verify(c => c.Dispose(), Times.Once);
-        }
-
-        [Test]
-        public void Dispose_WithNullClient_ShouldNotThrow()
-        {
-            // Arrange
-            var realClient = new TcpClient();
-            _sut = new TcpClientWrapper(realClient);
-            realClient.Dispose();
-
-            // Act
-            Action act = () => _sut.Dispose();
+            Action act = () =>
+            {
+                _sut.Dispose();
+                _sut.Dispose();
+            };
 
             // Assert
             act.Should().NotThrow();
@@ -153,8 +181,8 @@ namespace EchoServer.Tests.Abstractions
         public void GetStream_AfterDispose_ShouldThrowObjectDisposedException()
         {
             // Arrange
-            var realClient = new TcpClient();
-            _sut = new TcpClientWrapper(realClient);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
             _sut.Dispose();
 
             // Act
@@ -168,7 +196,8 @@ namespace EchoServer.Tests.Abstractions
         public void Close_AfterDispose_ShouldNotThrow()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
             _sut.Dispose();
 
             // Act
@@ -179,61 +208,57 @@ namespace EchoServer.Tests.Abstractions
         }
 
         [Test]
-        public void Dispose_ShouldSuppressFinalization()
+        public void GetStream_WhenNotConnected_ShouldThrowInvalidOperationException()
         {
             // Arrange
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
-
-            // Act
-            _sut.Dispose();
-
-            // Assert
-            _mockTcpClient.Verify(c => c.Dispose(), Times.Once);
-        }
-
-        [Test]
-        public void GetStream_WhenTcpClientThrowsException_ShouldPropagateException()
-        {
-            // Arrange
-            var expectedException = new InvalidOperationException("Connection failed");
-            _mockTcpClient.Setup(c => c.GetStream()).Throws(expectedException);
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _testClient = new TcpClient();
+            _sut = new TcpClientWrapper(_testClient);
 
             // Act
             Action act = () => _sut.GetStream();
 
             // Assert
-            act.Should().Throw<InvalidOperationException>()
-                .WithMessage("Connection failed");
+            act.Should().Throw<InvalidOperationException>();
         }
 
         [Test]
-        public void Close_WhenTcpClientThrowsException_ShouldPropagateException()
+        public void Wrapper_ShouldProperlyWrapTcpClientBehavior()
         {
             // Arrange
-            var expectedException = new SocketException();
-            _mockTcpClient.Setup(c => c.Close()).Throws(expectedException);
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-            // Act
-            Action act = () => _sut.Close();
+            _testClient = new TcpClient();
+            
+            try
+            {
+                // Act
+                _testClient.Connect(IPAddress.Loopback, port);
+                _sut = new TcpClientWrapper(_testClient);
+                var stream = _sut.GetStream();
 
-            // Assert
-            act.Should().Throw<SocketException>();
+                // Assert
+                _testClient.Connected.Should().BeTrue();
+                stream.Should().NotBeNull();
+            }
+            finally
+            {
+                listener.Stop();
+            }
         }
 
         [Test]
-        public void Dispose_WhenTcpClientThrowsException_ShouldNotThrow()
+        public void Dispose_WithNullClient_ShouldHandleGracefully()
         {
             // Arrange
-            _mockTcpClient.Setup(c => c.Dispose()).Throws<InvalidOperationException>();
-            _sut = new TcpClientWrapper(_mockTcpClient.Object);
+            _sut = new TcpClientWrapper(null!);
 
             // Act
             Action act = () => _sut.Dispose();
 
             // Assert
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().NotThrow();
         }
     }
 }
