@@ -24,6 +24,8 @@ namespace EchoServer.Tests.Abstractions
             {
                 _testListener.Stop();
                 _testListener.Server?.Dispose();
+                // Виправлення: додано Dispose для _testListener
+                (_testListener as IDisposable)?.Dispose();
             }
         }
 
